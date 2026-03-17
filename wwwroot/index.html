@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Exposure of the UK &amp; EU Job Market</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highcharts/11.3.0/highcharts.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highcharts/11.3.0/modules/treemap.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highcharts/11.3.0/modules/heatmap.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highcharts/11.3.0/modules/accessibility.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #181b24; --surface2: #1e2230; --border: #2a2e3d;
+      --text: #d8dce8; --muted: #7a8098; --dim: #4a5068; --accent: #4f8ef7;
+      --sig-confirming: #ef4444;
+      --sig-lagging:    #f59e0b;
+      --sig-diverging:  #8b5cf6;
+      --sig-neutral:    #475569;
+    }
+    html, body {
+      height: 100%; background: var(--bg); color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 13px; overflow: hidden;
+    }
+    .app    { display: flex; flex-direction: column; height: 100vh; }
+    .hero   { padding: 12px 20px 10px; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0; }
+    .hero h1 { font-size: 1.2rem; font-weight: 800; color: #fff; letter-spacing: -.025em; }
+    .hero p  { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+    .main   { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 214px; flex-shrink: 0; background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto; padding: 10px 10px 20px;
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .sidebar::-webkit-scrollbar { width: 3px; }
+    .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .region-toggle { display: flex; gap: 4px; margin-bottom: 10px; }
+    .rtbtn {
+      flex: 1; padding: 5px 4px; font-size: 0.72rem; font-weight: 700;
+      border: 1px solid var(--border); border-radius: 4px; background: transparent;
+      color: var(--muted); cursor: pointer; transition: all .15s;
+    }
+    .rtbtn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* view toggle */
+    .view-toggle { display: flex; gap: 0; margin-bottom: 10px; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+    .vtbtn {
+      flex: 1; padding: 4px 6px; font-size: 0.68rem; font-weight: 600;
+      border: none; background: transparent; color: var(--muted); cursor: pointer; transition: all .15s;
+      text-align: center; white-space: nowrap;
+    }
+    .vtbtn.active { background: var(--surface2); color: var(--text); }
+    .vtbtn:not(:last-child) { border-right: 1px solid var(--border); }
+
+    .slabel { font-size: 0.6rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); margin: 9px 0 3px; }
+    .sdivider { height: 1px; background: var(--border); margin: 7px 0; }
+
+    .bignum    { font-size: 1.8rem; font-weight: 900; color: #fff; letter-spacing: -.04em; line-height: 1; }
+    .bignumsub { font-size: 0.63rem; color: var(--muted); margin-top: 2px; }
+
+    /* histogram */
+    .histo { display: flex; align-items: flex-end; gap: 2px; height: 36px; margin: 3px 0 2px; }
+    .hbar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+    .hbar { width: 100%; border-radius: 2px 2px 0 0; min-height: 2px; transition: height .5s; }
+    .haxis { display: flex; justify-content: space-between; }
+    .haxis span { font-size: 0.57rem; color: var(--dim); }
+
+    /* tiers */
+    .tier-row { display: flex; align-items: center; gap: 4px; margin-bottom: 4px; }
+    .tdot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .tname { font-size: 0.65rem; color: var(--muted); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tbar-bg   { width: 48px; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; flex-shrink: 0; }
+    .tbar-fill { height: 100%; border-radius: 2px; }
+    .tpct { font-size: 0.6rem; color: var(--dim); min-width: 24px; text-align: right; }
+
+    /* mini bars (pay/edu) */
+    .mini-row { display: flex; align-items: center; gap: 4px; margin-bottom: 3px; }
+    .mrow-label  { font-size: 0.62rem; color: var(--muted); width: 72px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mrow-bar-bg { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
+    .mrow-bar-fill { height: 100%; border-radius: 2px; }
+    .mrow-val    { font-size: 0.62rem; color: var(--text); min-width: 22px; text-align: right; }
+
+    /* ── SIGNAL CARDS ── */
+    .signal-cards { display: flex; flex-direction: column; gap: 5px; }
+    .sig-card {
+      border-radius: 5px; padding: 7px 8px; border: 1px solid transparent;
+      cursor: pointer; transition: all .15s; position: relative;
+    }
+    .sig-card:hover { opacity: .9; }
+    .sig-card.active { border-color: currentColor; }
+    .sig-card-header { display: flex; align-items: center; gap: 5px; margin-bottom: 2px; }
+    .sig-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .sig-name { font-size: 0.68rem; font-weight: 700; }
+    .sig-desc { font-size: 0.6rem; opacity: .75; margin-bottom: 4px; line-height: 1.3; }
+    .sig-stats { display: flex; gap: 10px; }
+    .sig-stat  { font-size: 0.6rem; }
+    .sig-stat strong { font-size: 0.72rem; font-weight: 800; display: block; }
+    .sig-examples { font-size: 0.59rem; opacity: .65; margin-top: 3px; line-height: 1.3; font-style: italic; }
+
+    .wages-num { font-size: 1.4rem; font-weight: 900; color: #ff9f4a; letter-spacing: -.03em; line-height: 1; }
+    .wages-sub { font-size: 0.6rem; color: var(--muted); margin-top: 2px; }
+
+    .legend-bar { height: 8px; border-radius: 4px; margin: 3px 0 2px; }
+    .legend-labels { display: flex; justify-content: space-between; }
+    .legend-labels span { font-size: 0.58rem; color: var(--dim); }
+
+    /* ── CHART ── */
+    .chart-area { flex: 1; position: relative; overflow: hidden; z-index: 1; }
+    #chart { width: 100%; height: 100%; }
+    .loading {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 10px;
+      background: var(--bg); color: var(--muted); font-size: .8rem;
+    }
+    .spinner {
+      width: 28px; height: 28px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header class="hero">
+    <h1>AI Exposure of the UK &amp; EU Job Market</h1>
+    <p id="hero-sub">Loading… &nbsp;·&nbsp; area = employment &nbsp;·&nbsp; Sources: ONS, Eurostat, CEDEFOP</p>
+  </header>
+
+  <div class="main">
+    <aside class="sidebar">
+
+      <!-- Region -->
+      <div class="region-toggle">
+        <button class="rtbtn active" id="btn-uk" onclick="switchRegion('uk')">🇬🇧 UK</button>
+        <button class="rtbtn"        id="btn-eu" onclick="switchRegion('eu')">🇪🇺 EU-27</button>
+      </div>
+
+      <!-- View toggle -->
+      <div class="view-toggle">
+        <button class="vtbtn active" id="vt-exposure" onclick="switchView('exposure')">AI Exposure</button>
+        <button class="vtbtn"        id="vt-signal"   onclick="switchView('signal')">Trend Signal</button>
+      </div>
+
+      <!-- Total jobs -->
+      <div class="slabel">Jobs Covered (Sample)</div>
+      <div class="bignum" id="s-jobs">—</div>
+      <div class="bignumsub" id="s-jobs-sub">loading…</div>
+
+      <!-- Weighted avg -->
+      <div class="slabel" style="margin-top:8px">Weighted Avg. Exposure</div>
+      <div class="bignum" id="s-avg" style="color:#f59e0b">—</div>
+      <div class="bignumsub">job-weighted, 0–10 scale</div>
+
+      <!-- Histogram -->
+      <div class="slabel" style="margin-top:8px">Jobs by Exposure (weighted)</div>
+      <div class="histo" id="s-histo"></div>
+      <div class="haxis"><span>0</span><span>5</span><span>10</span></div>
+
+      <div class="sdivider"></div>
+
+      <!-- Breakdown -->
+      <div class="slabel">Breakdown</div>
+      <div id="s-tiers"></div>
+
+      <div class="sdivider"></div>
+
+      <!-- Pay -->
+      <div class="slabel">Exposure by Pay</div>
+      <div id="s-pay"></div>
+
+      <div class="sdivider"></div>
+
+      <!-- Education -->
+      <div class="slabel">Exposure by Education</div>
+      <div id="s-edu"></div>
+
+      <div class="sdivider"></div>
+
+      <!-- Trend signals -->
+      <div class="slabel">Trend Signals</div>
+      <div class="signal-cards" id="s-signals"></div>
+
+      <div class="sdivider"></div>
+
+      <!-- Wages -->
+      <div class="slabel">Wages Exposed</div>
+      <div class="wages-num" id="s-wages">—</div>
+      <div class="wages-sub">annual wages in high-exposure jobs (7+)</div>
+
+      <div class="sdivider"></div>
+
+      <!-- Legend (dynamic) -->
+      <div id="legend-wrap">
+        <div class="legend-bar" id="s-legend-bar"></div>
+        <div class="legend-labels" id="s-legend-labels"></div>
+      </div>
+
+    </aside>
+
+    <div class="chart-area">
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <span>Loading occupation data…</span>
+      </div>
+      <div id="chart"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const SIGNAL_META = {
+  Confirming: {
+    col:   '#ef4444',
+    bg:    'rgba(239,68,68,0.08)',
+    label: 'Confirming',
+    desc:  'High AI exposure AND employment already declining — risk is showing in real data'
+  },
+  Lagging: {
+    col:   '#f59e0b',
+    bg:    'rgba(245,158,11,0.08)',
+    label: 'Lagging',
+    desc:  'High AI exposure but employment still stable or growing — disruption not yet visible'
+  },
+  Diverging: {
+    col:   '#8b5cf6',
+    bg:    'rgba(139,92,246,0.08)',
+    label: 'Diverging',
+    desc:  'Employment declining but low AI exposure — other factors driving the change'
+  },
+  Neutral: {
+    col:   '#475569',
+    bg:    'rgba(71,85,105,0.08)',
+    label: 'Neutral',
+    desc:  'Moderate exposure or stable employment — no strong signal either way'
+  }
+};
+
+const TIERS = [
+  { key:'minimal',  label:'Minimal (0–2)',   col:'#166534' },
+  { key:'low',      label:'Low (2–4)',        col:'#15803d' },
+  { key:'moderate', label:'Moderate (4–6)',   col:'#d97706' },
+  { key:'high',     label:'High (6–8)',       col:'#dc2626' },
+  { key:'veryHigh', label:'Very High (8–10)', col:'#7f1d1d' },
+];
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+const scoreCol = s => {
+  const stops = [[0,[21,128,61]],[3,[74,222,128]],[5,[251,191,36]],[7,[220,38,38]],[10,[127,29,29]]];
+  for (let i=1;i<stops.length;i++) {
+    if (s<=stops[i][0]) {
+      const t=(s-stops[i-1][0])/(stops[i][0]-stops[i-1][0]);
+      const a=stops[i-1][1], b=stops[i][1];
+      return `rgb(${Math.round(a[0]+(b[0]-a[0])*t)},${Math.round(a[1]+(b[1]-a[1])*t)},${Math.round(a[2]+(b[2]-a[2])*t)})`;
+    }
+  }
+  return 'rgb(127,29,29)';
+};
+
+const fmtJobs  = n => n >= 1000 ? (n/1000).toFixed(1)+'M' : n+'K';
+const fmtTrend = v => (v > 0 ? '+' : '') + v.toFixed(1) + '%';
+const trendCol = v => v > 0 ? '#22c55e' : v < -3 ? '#ef4444' : '#f59e0b';
+const tierOf   = s => {
+  if (s<=2) return {label:'Minimal',   col:'#166534'};
+  if (s<=4) return {label:'Low',       col:'#15803d'};
+  if (s<=6) return {label:'Moderate',  col:'#d97706'};
+  if (s<=8) return {label:'High',      col:'#dc2626'};
+  return           {label:'Very High', col:'#7f1d1d'};
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let region      = 'uk';
+let viewMode    = 'exposure';   // 'exposure' | 'signal'
+let activeSignal = null;         // null = show all, else filter by signal
+let allOccs     = [];
+let chart       = null;
+let mouseX = 0, mouseY = 0;
+document.addEventListener('mousemove', e => {
+  mouseX = e.clientX; mouseY = e.clientY;
+  const tt = document.getElementById('tt');
+  if (tt.style.display !== 'none') positionTT(tt);
+});
+
+function positionTT(tt) {
+  const pad = 16, w = tt.offsetWidth, h = tt.offsetHeight;
+  let x = mouseX + pad, y = mouseY + pad;
+  if (x + w > window.innerWidth)  x = mouseX - w - pad;
+  if (y + h > window.innerHeight) y = mouseY - h - pad;
+  tt.style.left = x + 'px';
+  tt.style.top  = y + 'px';
+}
+
+function buildTT(point, name) {
+  const c    = point.custom;
+  const sc   = scoreCol(c.score);
+  const tier = tierOf(c.score);
+  const sig  = c.signalMeta;
+  const tc   = trendCol(c.change);
+  const gCol = c.growth==='Growing'?'#22c55e':c.growth==='Declining'?'#ef4444':'#f59e0b';
+  const gArr = c.growth==='Growing'?'▲':c.growth==='Declining'?'▼':'→';
+  return `<div style="padding:14px;min-width:290px;max-width:350px">
+    <div style="font-size:13px;font-weight:700;color:#e8eaf0;margin-bottom:1px">${name}</div>
+    <div style="font-size:10.5px;color:#7a8098;margin-bottom:10px">${c.sector}</div>
+    <div style="background:${sig.col}18;border:1px solid ${sig.col}44;border-radius:5px;padding:6px 8px;margin-bottom:10px;display:flex;align-items:center;gap:8px">
+      <div style="width:8px;height:8px;border-radius:50%;background:${sig.col};flex-shrink:0"></div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:${sig.col}">${sig.label}</div>
+        <div style="font-size:9px;color:#7a8098;margin-top:1px">${sig.desc}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:10px">
+      <div style="background:#111827;border-radius:5px;padding:7px">
+        <div style="font-size:7.5px;text-transform:uppercase;letter-spacing:.08em;color:#4a5068;margin-bottom:2px">AI Exposure</div>
+        <div style="font-size:1.3rem;font-weight:900;color:${sc};line-height:1">${c.score.toFixed(1)}<span style="font-size:9px;color:#4a5068">/10</span></div>
+        <div style="font-size:8.5px;color:${sc};margin-top:1px">${tier.label}</div>
+      </div>
+      <div style="background:#111827;border-radius:5px;padding:7px">
+        <div style="font-size:7.5px;text-transform:uppercase;letter-spacing:.08em;color:#4a5068;margin-bottom:2px">3-Year Trend</div>
+        <div style="font-size:1.3rem;font-weight:900;color:${tc};line-height:1">${fmtTrend(c.change)}</div>
+        <div style="font-size:8.5px;color:#4a5068;margin-top:1px">employment change</div>
+      </div>
+      <div style="background:#111827;border-radius:5px;padding:7px">
+        <div style="font-size:7.5px;text-transform:uppercase;letter-spacing:.08em;color:#4a5068;margin-bottom:2px">Employment</div>
+        <div style="font-size:1rem;font-weight:800;color:#e8eaf0;line-height:1">${fmtJobs(c.jobs)}</div>
+        <div style="font-size:8.5px;color:#4a5068;margin-top:1px">thousands</div>
+      </div>
+      <div style="background:#111827;border-radius:5px;padding:7px">
+        <div style="font-size:7.5px;text-transform:uppercase;letter-spacing:.08em;color:#4a5068;margin-bottom:2px">Job Growth</div>
+        <div style="font-size:10px;font-weight:700;color:${gCol}">${gArr} ${c.growth}</div>
+        <div style="font-size:8.5px;color:#4a5068;margin-top:1px">outlook · ${c.salary}</div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#7a8098;line-height:1.5;border-left:2px solid ${sc};padding-left:7px;margin-bottom:6px">${c.reason}</div>
+    <div style="font-size:8.5px;color:#4a5068">Source: ${c.source}</div>
+  </div>`;
+}
+
+// ── Sidebar ────────────────────────────────────────────────────────────────
+function renderSidebar(stats, occs) {
+  document.getElementById('s-jobs').textContent = fmtJobs(stats.totalJobsThousands);
+  const coverage = region === 'uk'
+    ? `${occs.length} occupations · ~${Math.round(stats.totalJobsThousands/33000*100)}% of UK workforce`
+    : `${occs.length} occupations · ~${Math.round(stats.totalJobsThousands/207000*100)}% of EU-27 workforce`;
+  document.getElementById('s-jobs-sub').textContent = coverage;
+
+  const avgEl = document.getElementById('s-avg');
+  avgEl.textContent = stats.weightedAverageExposure.toFixed(1);
+  avgEl.style.color = scoreCol(stats.weightedAverageExposure);
+
+  // histogram
+  const maxH = Math.max(...stats.exposureHistogram.map(b => b.employmentThousands), 1);
+  document.getElementById('s-histo').innerHTML = stats.exposureHistogram.map(b =>
+    `<div class="hbar-wrap">
+      <div class="hbar" style="height:${Math.max(4,(b.employmentThousands/maxH)*100)}%;background:${scoreCol(b.scoreFloor+0.5)}"></div>
+    </div>`
+  ).join('');
+
+  // tiers
+  document.getElementById('s-tiers').innerHTML = TIERS.map(t => {
+    const d = stats.tierBreakdown[t.key];
+    return `<div class="tier-row">
+      <div class="tdot" style="background:${t.col}"></div>
+      <span class="tname">${t.label}</span>
+      <div class="tbar-bg"><div class="tbar-fill" style="width:${d.percentage}%;background:${t.col}"></div></div>
+      <span class="tpct">${d.percentage}%</span>
+    </div>`;
+  }).join('');
+
+  // pay
+  document.getElementById('s-pay').innerHTML = stats.exposureByPay.map(p =>
+    `<div class="mini-row">
+      <span class="mrow-label">${p.bracket}</span>
+      <div class="mrow-bar-bg"><div class="mrow-bar-fill" style="width:${(p.avgExposure/10)*100}%;background:${scoreCol(p.avgExposure)}"></div></div>
+      <span class="mrow-val">${p.avgExposure.toFixed(1)}</span>
+    </div>`
+  ).join('');
+
+  // education
+  document.getElementById('s-edu').innerHTML = stats.exposureByEducation.map(e =>
+    `<div class="mini-row">
+      <span class="mrow-label">${e.level}</span>
+      <div class="mrow-bar-bg"><div class="mrow-bar-fill" style="width:${(e.avgExposure/10)*100}%;background:${scoreCol(e.avgExposure)}"></div></div>
+      <span class="mrow-val">${e.avgExposure.toFixed(1)}</span>
+    </div>`
+  ).join('');
+
+  // signal cards
+  const sigs = stats.trendSignals;
+  const sigOrder = ['Confirming','Lagging','Diverging','Neutral'];
+  document.getElementById('s-signals').innerHTML = sigOrder.map(key => {
+    const m = SIGNAL_META[key];
+    const d = sigs[key.charAt(0).toLowerCase() + key.slice(1)];
+    const isActive = activeSignal === key;
+    return `<div class="sig-card ${isActive?'active':''}"
+                 style="background:${m.bg};border-color:${isActive?m.col:'transparent'};color:${m.col}"
+                 onclick="toggleSignal('${key}')">
+      <div class="sig-card-header">
+        <div class="sig-dot" style="background:${m.col}"></div>
+        <span class="sig-name">${m.label}</span>
+        <span style="margin-left:auto;font-size:.68rem;font-weight:800">${d.count} jobs</span>
+      </div>
+      <div class="sig-desc" style="color:${m.col}">${m.desc}</div>
+      <div class="sig-stats">
+        <div class="sig-stat" style="color:var(--text)">
+          <strong>${fmtJobs(d.employmentThousands)}</strong>employed
+        </div>
+      </div>
+      ${d.examples?.length ? `<div class="sig-examples" style="color:var(--muted)">${d.examples.join(' · ')}</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // wages
+  const sym = region === 'uk' ? '£' : '€';
+  document.getElementById('s-wages').textContent = `${sym}${stats.wagesExposedBillions.toFixed(1)}B`;
+
+  // legend
+  updateLegend();
+}
+
+function updateLegend() {
+  const bar    = document.getElementById('s-legend-bar');
+  const labels = document.getElementById('s-legend-labels');
+  if (viewMode === 'signal') {
+    bar.style.background = `linear-gradient(to right, ${SIGNAL_META.Confirming.col}, ${SIGNAL_META.Lagging.col}, ${SIGNAL_META.Diverging.col}, ${SIGNAL_META.Neutral.col})`;
+    labels.innerHTML = '<span>Confirming</span><span>Neutral</span>';
+  } else {
+    bar.style.background = 'linear-gradient(to right, #15803d, #4ade80, #fbbf24, #dc2626, #7f1d1d)';
+    labels.innerHTML = '<span>Low</span><span>High</span>';
+  }
+}
+
+// ── Signal filter ──────────────────────────────────────────────────────────
+function toggleSignal(key) {
+  activeSignal = activeSignal === key ? null : key;
+  // Re-render sidebar signal cards to update active state
+  document.querySelectorAll('.sig-card').forEach((el, i) => {
+    const k = ['Confirming','Lagging','Diverging','Neutral'][i];
+    const m = SIGNAL_META[k];
+    const isActive = activeSignal === k;
+    el.classList.toggle('active', isActive);
+    el.style.borderColor = isActive ? m.col : 'transparent';
+  });
+  renderChart();
+}
+
+// ── View toggle ────────────────────────────────────────────────────────────
+function switchView(mode) {
+  viewMode = mode;
+  document.getElementById('vt-exposure').classList.toggle('active', mode==='exposure');
+  document.getElementById('vt-signal').classList.toggle('active',   mode==='signal');
+  updateLegend();
+  renderChart();
+}
+
+// ── Chart ──────────────────────────────────────────────────────────────────
+function renderChart() {
+  let occs = activeSignal
+    ? allOccs.filter(o => o.trendSignal === activeSignal)
+    : allOccs;
+
+  const data = occs.map(o => {
+    const sig  = SIGNAL_META[o.trendSignal];
+    const col  = viewMode === 'signal' ? sig.col : scoreCol(o.aiExposureScore);
+    return {
+      id:   o.id,
+      name: o.name,
+      value: o.employmentThousands,
+      color: col,
+      custom: {
+        sector:   o.sector,
+        score:    o.aiExposureScore,
+        jobs:     o.employmentThousands,
+        salary:   o.medianAnnualSalary,
+        growth:   o.growthOutlook,
+        change:   o.employmentChange3Yr,
+        signal:   o.trendSignal,
+        signalMeta: sig,
+        reason:   o.rationale,
+        source:   o.dataSource,
+      }
+    };
+  });
+
+  if (chart) { chart.destroy(); chart = null; }
+
+  chart = Highcharts.chart('chart', {
+    chart: {
+      backgroundColor: '#0f1117',
+      margin: [0,0,0,0], spacing: [2,2,2,2],
+      animation: { duration: 400 },
+      style: { fontFamily: "system-ui,sans-serif" },
+      events: { load() { document.getElementById('loading').style.display='none'; } }
+    },
+    title:   { text: '' },
+    credits: { enabled: false },
+    exporting: { enabled: false },
+
+    series: [{
+      type: 'treemap',
+      layoutAlgorithm: 'squarified',
+      alternateStartingDirection: true,
+      animationLimit: 1000,
+      data,
+      borderWidth: 1,
+      borderColor: 'rgba(0,0,0,0.4)',
+      point: {
+        events: {
+          mouseOver() {
+            const tt = document.getElementById('tt');
+            tt.innerHTML = buildTT(this, this.name);
+            tt.style.display = 'block';
+            positionTT(tt);
+          },
+          mouseOut() {
+            document.getElementById('tt').style.display = 'none';
+          }
+        }
+      },
+      dataLabels: {
+        enabled: true,
+        useHTML: false,
+        formatter() {
+          const p = this.point;
+          const w = p.shapeArgs?.width  ?? 0;
+          const h = p.shapeArgs?.height ?? 0;
+          const c = p.custom;
+          if (!c || w < 28 || h < 16) return null;
+          if (w >= 110 && h >= 48) {
+            return `${p.name}<br/><span style="font-size:8px;opacity:0.6">${c.score.toFixed(0)}/10 · ${fmtJobs(c.jobs)} · ${fmtTrend(c.change)}</span>`;
+          }
+          return p.name;
+        },
+        crop: true, overflow: 'hidden', padding: 3,
+        style: { fontSize: '10px', fontWeight: '700', color: '#ffffff', textOutline: '0' },
+      },
+    }],
+
+    tooltip: { enabled: false },
+  });
+}
+
+// ── Load ───────────────────────────────────────────────────────────────────
+async function loadRegion() {
+  document.getElementById('loading').style.display = 'flex';
+  activeSignal = null;
+
+  const [occs, stats] = await Promise.all([
+    fetch(`/api/occupations?region=${region}`).then(r => r.json()),
+    fetch(`/api/stats?region=${region}`).then(r => r.json()),
+  ]);
+
+  allOccs = occs;
+  renderSidebar(stats, occs);
+  renderChart();
+
+  const src = region === 'uk' ? 'ONS LFS 2021–2024' : 'Eurostat LFS 2021–2024';
+  document.getElementById('hero-sub').textContent =
+    `${occs.length} occupations (sample) · area = employment · color = ${viewMode==='signal'?'trend signal':'AI exposure'} · ${src}`;
+}
+
+function switchRegion(r) {
+  if (r === region) return;
+  region = r;
+  document.getElementById('btn-uk').classList.toggle('active', r==='uk');
+  document.getElementById('btn-eu').classList.toggle('active', r==='eu');
+  loadRegion();
+}
+
+loadRegion();
+</script>
+
+<div id="tt" style="
+  position:fixed;z-index:99999;display:none;pointer-events:none;
+  background:#1e2230;border:1px solid #2a2e3d;border-radius:8px;
+  font-family:system-ui,sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.6);
+"></div>
+</body>
+</html>

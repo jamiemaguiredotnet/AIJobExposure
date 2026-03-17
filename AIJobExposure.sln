@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36327.8 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AIJobExposure", "AIJobExposure.csproj", "{20AF325A-8601-AA9A-2046-F0918B5C6DC4}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{20AF325A-8601-AA9A-2046-F0918B5C6DC4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20AF325A-8601-AA9A-2046-F0918B5C6DC4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20AF325A-8601-AA9A-2046-F0918B5C6DC4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20AF325A-8601-AA9A-2046-F0918B5C6DC4}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {C5CFAF69-856D-45B6-899A-77F17E017F5C}
+	EndGlobalSection
+EndGlobal
