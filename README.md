@@ -70,6 +70,8 @@ All occupation data is hardcoded in `UkOccupationData.cs` (UK) and `EuOccupation
 
 The dataset covers a sample of occupations — it is not exhaustive of every role in either economy.
 
+Unlike Karpathy's tool, which scores occupations dynamically, this is a point-in-time snapshot. The data does not refresh automatically — scores and employment figures reflect the state at the time of last update.
+
 ## License
 
 MIT
