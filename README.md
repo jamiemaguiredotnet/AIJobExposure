@@ -8,6 +8,8 @@ Most AI-and-jobs analysis stops at exposure: *which roles could AI do?* This pro
 
 Live site: https://jamiemaguire.net/jobs
 
+Blog: https://jamiemaguire.net/index.php/2026/03/21/visualising-ai-job-exposure-and-risk-across-the-uk-and-eu-markets/
+
 
 ## What it shows
 
