@@ -1,8 +1,13 @@
 # Visualising AI Job Exposure and Risk Across the UK and EU Markets
+<img width="1912" height="948" alt="image" src="https://github.com/user-attachments/assets/c87299bc-3f11-4eeb-93ca-26cd114f956d" />
+
 
 An interactive dashboard visualising AI disruption risk across ~130 occupations in the UK and EU-27. Each occupation is scored 0–10 for AI exposure and mapped against real employment trend data, letting you see not just which jobs *could* be affected — but which ones *already are*.
 
 Most AI-and-jobs analysis stops at exposure: *which roles could AI do?* This project adds a second dimension — **are those roles actually declining?** The trend signal layer cross-references AI exposure scores against real 3-year employment change data from ONS and Eurostat, surfacing the gap between theoretical risk and observed labour market movement.
+
+Live site: https://jamiemaguire.net/jobs
+
 
 ## What it shows
 
