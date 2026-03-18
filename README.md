@@ -6,6 +6,9 @@ An interactive dashboard visualising AI disruption risk across ~130 occupations 
 
 Most AI-and-jobs analysis stops at exposure: *which roles could AI do?* This project adds a second dimension — **are those roles actually declining?** The trend signal layer cross-references AI exposure scores against real 3-year employment change data from ONS and Eurostat, surfacing the gap between theoretical risk and observed labour market movement.
 
+Live site: https://jamiemaguire.net/jobs
+
+
 ## What it shows
 
 The dashboard presents occupations as a treemap where **node area = number of workers employed**. Two view modes let you explore the data differently:
