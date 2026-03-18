@@ -148,6 +148,7 @@
         <button class="vtbtn active" id="vt-exposure" onclick="switchView('exposure')">AI Exposure</button>
         <button class="vtbtn"        id="vt-signal"   onclick="switchView('signal')">Trend Signal</button>
       </div>
+      <div id="view-desc" style="font-size:0.6rem;color:#4a5068;margin-bottom:6px">Colour = AI exposure score (green → red)</div>
 
       <!-- Total jobs -->
       <div class="slabel">Jobs Covered (Sample)</div>
@@ -206,6 +207,9 @@
     </aside>
 
     <div class="chart-area">
+      <div id="filter-bar" style="display:none;position:absolute;top:8px;left:8px;z-index:10;background:rgba(15,17,23,0.85);border:1px solid #2a2e3d;border-radius:5px;padding:5px 10px;font-size:11px;color:#d8dce8;pointer-events:auto">
+        <span id="filter-bar-text"></span> &nbsp;·&nbsp; <span onclick="clearSignalFilter()" style="color:#4f8ef7;cursor:pointer">Show all</span>
+      </div>
       <div class="loading" id="loading">
         <div class="spinner"></div>
         <span>Loading occupation data…</span>
@@ -282,6 +286,7 @@ let viewMode    = 'exposure';   // 'exposure' | 'signal'
 let activeSignal = null;         // null = show all, else filter by signal
 let allOccs     = [];
 let chart       = null;
+let animateNext = true;          // true only for the initial region load
 let mouseX = 0, mouseY = 0;
 document.addEventListener('mousemove', e => {
   mouseX = e.clientX; mouseY = e.clientY;
@@ -438,9 +443,7 @@ function updateLegend() {
 }
 
 // ── Signal filter ──────────────────────────────────────────────────────────
-function toggleSignal(key) {
-  activeSignal = activeSignal === key ? null : key;
-  // Re-render sidebar signal cards to update active state
+function updateSignalUI() {
   document.querySelectorAll('.sig-card').forEach((el, i) => {
     const k = ['Confirming','Lagging','Diverging','Neutral'][i];
     const m = SIGNAL_META[k];
@@ -448,6 +451,26 @@ function toggleSignal(key) {
     el.classList.toggle('active', isActive);
     el.style.borderColor = isActive ? m.col : 'transparent';
   });
+  const bar = document.getElementById('filter-bar');
+  if (activeSignal) {
+    const count = allOccs.filter(o => o.trendSignal === activeSignal).length;
+    document.getElementById('filter-bar-text').textContent =
+      `Highlighting: ${activeSignal} · ${count} occupation${count !== 1 ? 's' : ''}`;
+    bar.style.display = 'block';
+  } else {
+    bar.style.display = 'none';
+  }
+}
+
+function toggleSignal(key) {
+  activeSignal = activeSignal === key ? null : key;
+  updateSignalUI();
+  renderChart();
+}
+
+function clearSignalFilter() {
+  activeSignal = null;
+  updateSignalUI();
   renderChart();
 }
 
@@ -456,46 +479,60 @@ function switchView(mode) {
   viewMode = mode;
   document.getElementById('vt-exposure').classList.toggle('active', mode==='exposure');
   document.getElementById('vt-signal').classList.toggle('active',   mode==='signal');
+  document.getElementById('view-desc').textContent = mode === 'signal'
+    ? 'Colour = trend signal category'
+    : 'Colour = AI exposure score (green → red)';
   updateLegend();
   renderChart();
 }
 
 // ── Chart ──────────────────────────────────────────────────────────────────
-function renderChart() {
-  let occs = activeSignal
-    ? allOccs.filter(o => o.trendSignal === activeSignal)
-    : allOccs;
-
-  const data = occs.map(o => {
-    const sig  = SIGNAL_META[o.trendSignal];
-    const col  = viewMode === 'signal' ? sig.col : scoreCol(o.aiExposureScore);
+function buildChartData() {
+  return allOccs.map(o => {
+    const sig    = SIGNAL_META[o.trendSignal];
+    const active = !activeSignal || o.trendSignal === activeSignal;
+    const col    = viewMode === 'signal' ? sig.col : scoreCol(o.aiExposureScore);
     return {
-      id:   o.id,
-      name: o.name,
+      id:    o.id,
+      name:  o.name,
       value: o.employmentThousands,
-      color: col,
+      color: active ? col : '#2a2e3d',
       custom: {
-        sector:   o.sector,
-        score:    o.aiExposureScore,
-        jobs:     o.employmentThousands,
-        salary:   o.medianAnnualSalary,
-        growth:   o.growthOutlook,
-        change:   o.employmentChange3Yr,
-        signal:   o.trendSignal,
+        sector:     o.sector,
+        score:      o.aiExposureScore,
+        jobs:       o.employmentThousands,
+        salary:     o.medianAnnualSalary,
+        growth:     o.growthOutlook,
+        change:     o.employmentChange3Yr,
+        signal:     o.trendSignal,
         signalMeta: sig,
-        reason:   o.rationale,
-        source:   o.dataSource,
+        reason:     o.rationale,
+        source:     o.dataSource,
+        dimmed:     !active,
       }
     };
   });
+}
+
+function renderChart() {
+  const data = buildChartData();
+
+  // Instant in-place colour update — no destroy/recreate, no double-click issue
+  if (chart) {
+    chart.series[0].setData(data, true, false);
+    return;
+  }
 
   if (chart) { chart.destroy(); chart = null; }
+
+  const animate = animateNext;
+  animateNext = false;
 
   chart = Highcharts.chart('chart', {
     chart: {
       backgroundColor: '#0f1117',
       margin: [0,0,0,0], spacing: [2,2,2,2],
-      animation: { duration: 400 },
+      animation: animate ? { duration: 400 } : false,
       style: { fontFamily: "system-ui,sans-serif" },
       events: { load() { document.getElementById('loading').style.display='none'; } }
     },
@@ -532,7 +569,7 @@ function renderChart() {
           const w = p.shapeArgs?.width  ?? 0;
           const h = p.shapeArgs?.height ?? 0;
           const c = p.custom;
-          if (!c || w < 28 || h < 16) return null;
+          if (!c || w < 28 || h < 16 || c.dimmed) return null;
           if (w >= 110 && h >= 48) {
             return `${p.name}<br/><span style="font-size:8px;opacity:0.6">${c.score.toFixed(0)}/10 · ${fmtJobs(c.jobs)} · ${fmtTrend(c.change)}</span>`;
           }
@@ -549,6 +586,7 @@ function renderChart() {
 
 // ── Load ───────────────────────────────────────────────────────────────────
 async function loadRegion() {
+  animateNext = true;
   document.getElementById('loading').style.display = 'flex';
   activeSignal = null;
 

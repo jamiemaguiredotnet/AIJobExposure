@@ -2,6 +2,8 @@
 
 An interactive dashboard visualising AI disruption risk across ~130 occupations in the UK and EU-27. Each occupation is scored 0–10 for AI exposure and mapped against real employment trend data, letting you see not just which jobs *could* be affected — but which ones *already are*.
 
+Most AI-and-jobs analysis stops at exposure: *which roles could AI do?* This project adds a second dimension — **are those roles actually declining?** The trend signal layer cross-references AI exposure scores against real 3-year employment change data from ONS and Eurostat, surfacing the gap between theoretical risk and observed labour market movement.
+
 ## What it shows
 
 The dashboard presents occupations as a treemap where **node area = number of workers employed**. Two view modes let you explore the data differently:
@@ -18,7 +20,7 @@ The dashboard presents occupations as a treemap where **node area = number of wo
 | **Diverging** (purple) | Low AI exposure (≤4.0) but employment falling sharply (≤−5%) — other factors driving decline |
 | **Neutral** (grey) | Everything else |
 
-Clicking a signal card in the sidebar filters the treemap to show only occupations in that category. Hover any node for a full breakdown including salary, growth outlook, rationale, and data source.
+Clicking a signal card in the sidebar highlights matching occupations in the treemap — non-matching nodes are dimmed. Click again or use "Show all" to clear. Hover any node for a full breakdown including salary, growth outlook, rationale, and data source.
 
 ### Sidebar stats
 
@@ -50,6 +52,17 @@ dotnet run
 ```
 
 Opens at `https://localhost:52270` (or `http://localhost:52271`).
+
+## Interpreting the scores
+
+A few things the AI exposure score does **not** mean:
+
+- **High exposure ≠ job elimination.** Software developers score 8–9/10 because AI transforms almost every part of their workflow — yet demand for developers is growing. Exposure measures how much of a role AI can touch, not whether that role will shrink.
+- **The score ignores demand elasticity.** A role can be highly automatable and still grow if the cost reduction unlocks new demand (e.g., cheaper code generation drives more software projects).
+- **Regulatory and social factors are excluded.** Healthcare and legal roles face high theoretical exposure but are insulated by licensing, liability, and patient/client expectations.
+- **Employment change data has lag.** Labour markets adjust slowly. A "Lagging" signal means the exposure risk hasn't shown up in the numbers *yet* — not that it won't.
+
+The most actionable signals are **Confirming** (high exposure + real decline) and **Diverging** (declining despite low AI exposure, suggesting other structural forces at work).
 
 ## Data notes
 
